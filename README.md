@@ -1,2 +1,2 @@
 # ArianneChristina_Beauregard
-repository for bcb420 for Arianne Christina Beauregard
+Link to Arianne Christina Beauregard's wiki - https://github.com/bcb420-2023/ArianneChristina_Beauregard/wiki
