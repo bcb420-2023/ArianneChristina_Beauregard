@@ -1,0 +1,463 @@
+---
+title: "BCB420 Assignment 1 - Dataset Selection and Initial Processing"
+output: html_notebook
+author: Arianne Beauregard
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+### Loading required libraries
+```{r}
+library(GEOquery)
+library(knitr)
+library(kableExtra)
+library(edgeR)
+library(org.Hs.eg.db)
+```
+
+---
+
+## Dataset
+The dataset of interest is from a study of lipid remodeling in response to methionine stress in triple-negative breast cancer (TNBC) cells (Borrego et al., 2021). The dataset contains RNA profiles of two TNBC cell lines, one methionine-sensitive cell line (MDA-MBA-468) its methionine-insensitive derivative (MDA-MB-468res-R8), responding to methionine stress.
+
+### Downloading Data
+We will first download and get information on the dataset using the package GEOquery.  The dataset is from GEO Accession GSE155955. We are interested in the third file, GSE155955_RAW_gene_count_matrix.csv.gz. 
+
+```{r}
+# description of dataset
+gse <- getGEO("GSE155955", GSEMatrix = FALSE)
+contact_info <- data.frame(head(Meta(gse)))
+colnames(contact_info) <- c("Address", "City", "Country", "Email", "Institute", "Name")
+kable(contact_info, format = "html", caption = "Contact Information") %>%
+  kable_styling()
+```
+
+```{r}
+# information about platform
+current_gpl <- names(GPLList(gse))[1]
+current_gpl_info <- Meta(getGEO(current_gpl))
+cat(paste0("Platform information:\n", "Title: ",  current_gpl_info$title, "\nLast updated: ", current_gpl_info$last_update_date, "\nOrganisim: ", current_gpl_info$organism))
+
+# getting supplementary files
+sfiles <- getGEOSuppFiles('GSE155955')
+fnames <- rownames(sfiles)
+
+# we want the 3rd file
+exp <- read.csv(fnames[3],header=TRUE,
+                check.names = FALSE)
+
+kable(exp[1:15,1:7], format = "html", caption = "Head of GSE155955 Dataset") %>%
+  kable_styling()
+```
+
+### Overview of Data
+Next, we will get an overview of the data. There are 26737 genes and 24 samples. There are no missing values in the gene count data.
+```{r}
+# checking number of genes(rows) and samples (columns - 3)
+dim(exp)
+
+# check for missing values 
+sum(is.na(exp[4:27]))
+```
+
+### Defining Groups
+There are two different cell lines (MDA-MB-468 and MDA-MB-468res-R8), measured at 4 different hourly timepoints (0h, 0.5h, 2h, 12h) during methionine stress. Methionine stress was added by providing homocysteine instead of methionine in the cell lines' growth media. There are 3 replicates for each cell line. 
+```{r}
+# define groups
+colnames(exp)
+samples <- data.frame(lapply(colnames(exp)[4:27], 
+        FUN=function(x){unlist(strsplit(x, 
+                        split = "_"))}))
+colnames(samples) <- colnames(exp)[4:27]
+rownames(samples) <- c("cell.line","timepoint", "replicate")
+samples <- data.frame(t(samples))
+kable(samples, caption = "Sample Groups", col.names = c("Cell Line", "Timepoint (min)", "Replicate")) %>%
+  kable_styling()
+```
+
+### Duplicated Genes
+We will check if there are any duplicate genes. There are 4 repeated gene symbols, HBD, MEMO1, MMD2 and TEC.
+```{r}
+summarized_gene_counts <- sort(table(exp$SYMBOL),
+                               decreasing = TRUE)
+
+kable(summarized_gene_counts[
+  which(summarized_gene_counts>1)[1:5]], 
+  format="html", caption = "Frequency of Duplicate Genes", col.names = c("Gene Symbol", "Frequency")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+
+### Filtering Low Counts
+Next, we filter out genes with low counts using the cpm (counts per million) function from the
+package edgeR. After filtering, we have 13113 genes, 49% of the original dataset. 
+```{r}
+# translate out counts into counts per million using the edgeR package function cpm
+cpms <- cpm(as.matrix(exp[, 4:27]))
+rownames(cpms) <- exp[,1]
+# get rid of low counts
+keep <- rowSums(cpms >1) >= 8
+exp_filtered <- exp[keep,]
+
+dim(exp_filtered)
+
+# proportion of genes remaing after filtering
+dim(exp_filtered)[1] / dim(exp)[1]
+```
+
+
+
+There are still 2 duplicated genes, MEMO1 and TEC. In the dataset, they have different Entrez IDs. From looking on NCBI, they are different genes. In both cases, the primary source of one of the duplicates is HGNC (with HUGO symbol), while the primary source of the other is OMIM (with no HUGO symbol associated). Because of this, we will map the genes to both HUGO symbols (if available) and Entrez IDs, to have 2 layers of identification. 
+```{r}
+# checking if there are repeats
+summarized_gene_counts_filtered <- sort(table(exp_filtered$SYMBOL),
+                                        decreasing = TRUE)
+
+
+kable(summarized_gene_counts_filtered[
+  which(summarized_gene_counts_filtered>1)[1:5]], 
+  format="html", caption = "Frequency of Duplicate Genes after Filtering", col.names = c("Gene Symbol", "Frequency")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+```{r}
+dup_symbols <- names(summarized_gene_counts_filtered[which(summarized_gene_counts_filtered>1)])
+
+kable(exp_filtered[exp_filtered$SYMBOL %in% dup_symbols, c("SYMBOL", "ENTREZID")], format="html", row.names = FALSE, caption = "Duplicate Genes", col.names = c("Gene Symbol", "Entrez ID")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+---
+
+##  Identifier Mapping
+### Mapping from Gene Symbols to Entrez IDs
+The data contains both gene symbols and Entrez IDs. Not all the Entrez IDs are available in the dataset.
+We will first map the genes to Entrez IDs for those that are missing. The org.Hs.eg.db package contains genome wide annotation for humans, primarily based on mapping using Entrez Gene identifiers. This package will be used to map from gene symbols to Entrez IDs. 
+```{r}
+# first select rows that have no entrezid
+missing_entrez <- exp_filtered[is.na(exp_filtered$ENTREZID), "SYMBOL"]
+
+# using keytype ALIAS to cover all 
+# tried using keytype SYMBOL, but returned Entrez ID for only one gene
+alias_to_entrez <- select(org.Hs.eg.db, keys=missing_entrez, columns="ENTREZID", keytype="ALIAS")
+
+# for genes that returned multiple entrezids, unable to tell which is correct id
+# will leave all entrez ids (concatenated by ", ") 
+alias_to_entrez_concat <- aggregate(ENTREZID ~ ALIAS, data = alias_to_entrez, paste, collapse = ", ")
+
+# add entrez ids to exp_filtered
+for (i in seq_along(alias_to_entrez_concat$ALIAS)){
+  gene <- alias_to_entrez_concat$ALIAS[i]
+  entrez <- alias_to_entrez_concat$ENTREZID[i]
+  exp_filtered[exp_filtered$SYMBOL == gene, "ENTREZID"] <- entrez
+}
+```
+
+
+Before mapping to HUGO symbols, we will first check the exceptions; genes still missing Entrez IDs and genes with multiple Entrez IDs. 
+
+<p>&nbsp;<p>
+
+#### Genes not mapped to Entrez IDs
+Among the genes without Entrez IDs, There are 47 gene symbols starting with "LOC".
+These are genes on NCBI where a published symbol is not available, and orthologs have not yet been determined. The symbols are constructed as 'LOC' + the Entrez ID. We will set the Entrez ID to be the numerical part of the the symbol (part after "LOC"). 
+
+There are 35 gene symbols starting with "ERCC-" with no Entrez ID. These are from ERCC RNA Spike-In mix controls, a  set of external RNA controls developed by the External RNA Controls Consortium (ERCC). We wil leave the Entrez IDs for these as NA, and retain their symbols.
+
+This leaves us with 8 gene symbols with missing Entrez IDs. We will manually map these to their Entrez IDs and HUGO symbols. Results were found on Harmonizome and NCBI.
+```{r}
+# find symbols still missing entrez (90)
+missing_entrez <- exp_filtered[is.na(exp_filtered$ENTREZID), "SYMBOL"]
+
+# LOC genes -> SYMBOL - "LOC" for entrez id
+exp_filtered$ENTREZID <- ifelse(grepl("^LOC", exp_filtered$SYMBOL) & is.na(exp_filtered$ENTREZID), gsub("LOC", "", exp_filtered$SYMBOL), exp_filtered$ENTREZID)
+
+# still missing (43)
+missing_entrez <- exp_filtered[is.na(exp_filtered$ENTREZID), "SYMBOL"]
+
+# remove ERCC-
+missing_entrez <- missing_entrez[!grepl("^ERCC-", missing_entrez)]
+
+# show remaining genes with missing entrez
+missing_entrez
+
+# manual mapping for 8 remaining missing
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FLJ10038"] <- 55056
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FLJ23867"] <- 5768
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FLJ41200"] <- 401492
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FLJ43879"] <- 401039
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "KIAA1804"] <- 84451
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "MGC39584"] <- 441058
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "MGC72080"] <- 389538
+
+# correct HGNC symbol, record is discontinued, no new record
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "MIR6723"] <- 102465432
+```
+
+<p>&nbsp;<p>
+
+#### Genes mapped to multiple Entrez IDs
+Next, we will look at the genes with multiple Entrez IDs. There are 14 genes that were mapped to multiple Entrez IDs.  We will manually map these to their Entrez IDs and HUGO symbols. Results were found on Harmonizome and NCBI.
+```{r}
+multiple_entrez <- missing_entrez <- exp_filtered[grepl(", ", exp_filtered$ENTREZID), ]
+kable(multiple_entrez[, c("SYMBOL", "ENTREZID")], caption = "Genes Symbols mapped to Multiple Entrez IDs", 
+      col.names = c("Gene Symbol", "Entrez IDs")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+```{r}
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "AIM1"] <- 202
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "APITD1"] <- 378708
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "C10orf2"] <- 56652
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "C2orf47"] <- 79568
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "CSRP2BP"] <- 57325
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "EFTUD1"] <- 79631
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FAM21A"] <- 387680
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "HN1"] <- 51155
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "HN1L"] <- 90861
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "NAT6"] <- 24142 # NAA80
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "NOTCH2NL"] <- 388677
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "SHFM1"] <- 7979
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "SLC35E2"] <- 9906
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "STRA13"] <- 201254
+```
+
+### Mapping from Entrez IDs to HUGO Symbols
+Next, we will map the Entrez IDs to their HUGO symbols, using the org.Hs.eg.db package.
+```{r}
+entrez_to_symbol <- select(org.Hs.eg.db, keys=exp_filtered$ENTREZID, columns="SYMBOL", keytype="ENTREZID")
+
+to_check <- data.frame(matrix(nrow = 0, ncol = 2))
+colnames(to_check) <- c("SYMBOL", "ENTREZID")
+
+# row order is retained, change the ones that are different
+for (i in seq_along(entrez_to_symbol$SYMBOL)) {
+  new_symbol <- entrez_to_symbol$SYMBOL[i]
+  if (is.na(new_symbol)) {
+    # add to dataframe to check
+    to_check[nrow(to_check) + 1, ] <- list(exp_filtered$SYMBOL[i], exp_filtered$ENTREZID[i])
+  } else if (new_symbol != exp_filtered$SYMBOL[i]) {
+    exp_filtered$SYMBOL[i] <- new_symbol
+  } else {
+    # no change, correct symbol
+    ;
+  }
+}
+```
+
+
+### Outliers
+We will manually check the remaining genes that did not map to any symbol. 19 out of the 21 genes were discontinued on NCBI. These were replaced with new gene IDs and symbols. 2 genes were discontinued and not replaced from NCBI, CRIPAK and MIR6723; we will leave these as is.
+```{r}
+# ignore all genes starting ERCC- (RNA controls)
+to_check <- to_check[!grepl("^ERCC-", to_check$SYMBOL), ]
+kable(to_check, row.names = FALSE, col.names = c("Gene Symbol", "Entrez ID")) %>%
+  kable_styling()
+```
+
+```{r}
+# Withdrawn genes: CRIPAK, MIR6723
+
+# discontinued, replace with new gene id
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "C2orf48"] <- "RRM2"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "RRM2"] <- 6241
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "KIAA0754"] <- "MACF1"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "MACF1"] <- 23499
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "KIAA1107"] <- "BTBD8"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "BTBD8"] <- 284697
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LINC01279"] <- "CCDC80"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "CCDC80"] <- 151887
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC100130093"] <- "SNAP47"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "SNAP47"] <- 116841
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC100130899"] <- "FAM83F"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "FAM83F"] <- 113828
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC100133331"] <- "LOC100288069"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "LOC100288069"] <- 100288069
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC100506548"] <- "RPL37"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "RPL37"] <- 6167
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC100507577"] <- "LONP2"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "LONP2"] <- 83752
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC101927181"] <- "CHST12"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "CHST12"] <- 55501
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC101929613"] <- "GREP1"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "GREP1"] <- 283875
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC102723703"] <- "TSPAN14"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "TSPAN14"] <- 81619
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC103611081"] <- "SNX19"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "SNX19"] <- 399979
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC105376575"] <- "NUCB2"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "NUCB2"] <- 4925
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "LOC90784"] <- "POLR1A"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "POLR1A"] <- 25885
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "MGC27345"] <- "RBM28"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "RBM28"] <- 55131
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "MICALCL"] <- "MICAL2"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "MICAL2"] <- 9645
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "PALM2"] <- "PALM2AKAP2"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "PALM2AKAP2"] <- 445815
+exp_filtered$SYMBOL[exp_filtered$SYMBOL == "TNRC6C-AS1"] <- "TMC6"
+exp_filtered$ENTREZID[exp_filtered$SYMBOL == "TMC6"] <- 11322
+```
+
+### Duplicated genes
+Now that identifier mapping is done, we will check if there are duplicated genes. There are now 21 duplicated genes. These include the 2 from earlier (MEMO1 and TEC), and 19 new ones. There are new duplicated genes are because the different symbols actually mapped to the same gene, once replacing all discontinued ones.  
+```{r}
+summarized_gene_counts_filtered <- sort(table(exp_filtered$SYMBOL),
+                               decreasing = TRUE)
+
+kable(summarized_gene_counts_filtered[
+  which(summarized_gene_counts_filtered>1)[1:25]], 
+  format="html", caption = "Frequency of Duplicate Genes after Filtering and ID Mapping", col.names = c("Gene Symbol", "Frequency")) %>%
+  kable_styling(full_width = FALSE, position = "left")
+```
+
+---
+
+## Normalization
+We will look at the distribution of the data. We will visualize this through a boxplot and density plot. 
+```{r}
+# distribution (box plot)
+data2plot <- log2(cpm(exp_filtered[,4:27]))
+boxplot(data2plot, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 0.5, cex.lab = 0.5,
+        cex.axis = 0.5, main = "Boxplot of TNBC RNA-Seq Samples")
+# draw the median on each box plot
+abline(h = median(apply(data2plot, 2, median)), 
+       col = "red", lwd = 0.6, lty = "dashed")
+
+
+# density plot
+counts_density <- apply(log2(cpm(exp_filtered[,4:27])), 
+                        2, density)
+  # calculate the limits across all the samples
+    xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density)) {
+      xlim <- range(c(xlim, counts_density[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density))
+    ltys <- rep(1, length(counts_density))
+    # plot the first density plot to initialize the plot
+    plot(counts_density[[1]], xlim=xlim, ylim=ylim, type="n",
+         ylab="Smoothing density of log2-CPM", 
+         main="Density plot of TNBC RNA-Seq Samples", cex.lab = 0.85)
+    # plot each line
+    for (i in 1:length(counts_density)) 
+      lines(counts_density[[i]], col=cols[i], lty=ltys[i])
+    # create legend
+    legend("topright", colnames(data2plot),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
+```
+
+### Normalization Method
+Our data contains ERCC RNA Spike-In mix controls, which are a set of synthetic RNAs that act as controls. We can use conventional normalization methods (Evans et al., 2018). We will use Trimmed Mean of M-values (TMM) on our dataset. 
+edgeR normalization
+```{r}
+# groups are cell line + timepoint
+groups <- mapply(paste, samples$cell.line, samples$timepoint)
+
+# prepare matrix of data
+filtered_data_matrix <- as.matrix(exp_filtered[,4:27])
+rownames(filtered_data_matrix) <- exp_filtered$SYMBOL
+d <- DGEList(counts=filtered_data_matrix, group=groups)
+
+# TMM to calculate norm factors
+d <- calcNormFactors(d, method = "TMM")
+
+# normalize counts
+norm_counts <- cpm(d, log = TRUE)
+
+# extract spike norms and raw norms
+spike_norm_counts <- norm_counts[grepl("^ERCC-", row.names(norm_counts)), ]
+raw_norm_counts <- norm_counts[!grepl("^ERCC-", row.names(norm_counts)), ]
+
+# calculate the scaling factor
+scaling_factor <- mean(rowSums(raw_norm_counts)) / mean(rowSums(spike_norm_counts))
+
+# apply the scaling factor to the raw norm counts
+normalized_counts <- raw_norm_counts * scaling_factor
+
+```
+
+
+
+We will visualize the distribution of our normalized data. 
+```{r}
+# plot normalized 
+# distribution (box plot)
+data2plot <- log2(cpm(normalized_counts))
+boxplot(data2plot, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 0.5, cex.lab = 0.5,
+        cex.axis = 0.5, main = "TNBC RNA-Seq Samples (TMM normalized)")
+# draw the median on each box plot
+abline(h = median(apply(data2plot, 2, median, na.rm = TRUE)), 
+       col = "red", lwd = 0.6, lty = "dashed")
+
+
+# density plot
+counts_density <- apply(log2(cpm(normalized_counts)), 
+                        2, density, na.rm = TRUE)
+  # calculate the limits across all the samples
+    xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density)) {
+      xlim <- range(c(xlim, counts_density[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density))
+    ltys <- rep(1, length(counts_density))
+    # plot the first density plot to initialize the plot
+    plot(counts_density[[1]], xlim=xlim, ylim=ylim, type="n", 
+         ylab="Smoothing density of log2-CPM", 
+         main="Density plot of TNBC RNA-Seq Samples (TMM normalized)", cex.lab = 0.85)
+    # plot each line
+    for (i in 1:length(counts_density)) 
+      lines(counts_density[[i]], col=cols[i], lty=ltys[i])
+    # create legend
+    legend("topright", colnames(data2plot),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
+
+```
+The sample separation is visualized below in a multidimensional scaling plot. The distance between each pair of points correlates to the dissimilarity between the two samples. The cell line MDA-MBA-468 is shown in green, while the cell line MDA-MB-468res-R8 is shown in blue. As shown in the plot, the two cell lines are relatively dissimilar. 
+```{r}
+plotMDS(d, labels=rownames(samples),
+  col = c("darkgreen","blue")[factor(samples$cell.line)], main = "Multidimensional Scaling Plot of Samples")
+```
+
+
+
+## Dispersion
+Finally, we will look at the dispersion of our data. We visualize the biological coefficient of variation (BCV) and the mean-variance relationship in the plots below.
+```{r}
+model_design <- model.matrix(~samples$cell.line 
+                             + samples$timepoint)
+d <- estimateDisp(d, model_design)
+invisible(plotBCV(d, col.tagwise = "black", col.common = "red", main = "BCV Plot of TNBC RNA-Seq data"))
+```
+
+```{r}
+# mean variance relationship
+plotMeanVar(d, show.raw.vars = TRUE,
+            show.tagwise.vars=TRUE,
+            NBline=TRUE, show.ave.raw.vars = TRUE,
+            show.binned.common.disp.vars = TRUE, 
+            main = "Mean-Variance Relationship of TNBC RNA-Seq data")
+```
+
+
+
+
+
+### References
+- Andrew D. Rouillard, Gregory W. Gundersen, Nicolas F. Fernandez, Zichen Wang, Caroline D. Monteiro, Michael G. McDermott, Avi Ma’ayan, The harmonizome: a collection of processed datasets gathered to serve and mine knowledge about genes and proteins, Database, Volume 2016, 2016, baw100, https://doi.org/10.1093/database/baw100
+
+- Borrego, S. L., Fahrmann, J., Hou, J., Lin, D. W., Tromberg, B. J., Fiehn, O., & Kaiser, P. (2021). Lipid remodeling in response to methionine stress in MDA-MBA-468 triple-negative breast cancer cells. Journal of lipid research, 62, 100056. https://doi.org/10.1016/j.jlr.2021.100056
+
+- Evans C, Hardin J, Stoebel DM. Selecting between-sample RNA-Seq normalization methods from the perspective of their assumptions. Brief Bioinform. 2018 Sep 28;19(5):776-792. doi: 10.1093/bib/bbx008. PMID: 28334202; PMCID: PMC6171491. (for selecting normalization)
+
+- National Center for Biotechnology Information (NCBI)[Internet]. Bethesda (MD): National Library of Medicine (US), National Center for Biotechnology Information; [1988] – [cited 2017 Apr 06]. Available from: https://www.ncbi.nlm.nih.gov/
