@@ -1,0 +1,31 @@
+---
+title: "Homework Assignment: Docker"
+output: html_notebook
+---
+## Create Matrix of Random Integers
+First, we create a 5 by 10 matrix of random integers. This will sample from integers between 1 and 100, with replacement.
+
+```{r}
+mat <- matrix(sample.int(100, size = 50, replace = TRUE), nrow = 5, ncol = 10)
+```
+
+
+## Define Column and Row Names
+Next, we define the column names as cond1, cond2, cond3, cond4, cond5, ctrl1, ctrl2, ctrl3, ctrl4, ctrl5. We define the row names as gene1, gene2, gene3, gene4, gene5.
+```{r}
+colnames(mat) <- c("cond1", "cond2", "cond3", "cond4", "cond5", "ctrl1", "ctrl2", "ctrl3", "ctrl4", "ctrl5")
+rownames(mat) <- c("gene1", "gene2", "gene3", "gene4", "gene5")
+
+# View our matrix
+mat
+```
+
+
+## Compute Fold Change for each Gene
+We compute the log2 fold change for each gene and visualize it in a heatmap.
+```{r}
+cond <- mat[, 1:5]
+ctrl <- mat[, 6:10]
+foldchange <- log2(cond/ctrl)
+pheatmap::pheatmap(foldchange, main = "Heatmap of log2 fold change")
+```
