@@ -3,7 +3,6 @@ title: "BCB420 Assignment 2 - Differential Gene expression and Preliminary ORA"
 author: Arianne Beauregard
 output: 
   html_notebook:
-    fig_caption: yes
     toc: true
     depth: 2
 bibliography: references.bib
@@ -11,9 +10,9 @@ bibliography: references.bib
 
 # Install and load required packages
 ```{r, echo = T, results='hide'}
-
+# all required packages
 bioc <- c("ComplexHeatmap", "edgeR", "limma")
-cran <- c("knitr", "kableExtra", "circlize", "colorspace", "ggplot2", "dplyr", "gprofiler2")
+cran <- c("knitr", "kableExtra", "circlize", "ggplot2", "dplyr", "gprofiler2")
 
 # install BiocManager if needed
 if (!require("BiocManager", quietly = TRUE))
@@ -27,7 +26,7 @@ for (package in bioc) {
   }
 }
 
-# install cran packages in necessary
+# install cran packages if necessary
 for(package in cran) {
   if(!require(package, character.only = TRUE)){
     install.packages(package)
@@ -36,6 +35,7 @@ for(package in cran) {
 }
 ```
 
+---
 
 # Introduction on Data
 The dataset is from a study of lipid remodeling in response to methionine stress in triple-negative breast cancer (TNBC) cells (Borrego et al., 2021). The dataset contains RNA profiles of two TNBC cell lines, one methionine-sensitive cell line (MDA-MBA-468) its methionine-insensitive derivative (MDA-MB-468res-R8), responding to methionine stress. The data was downloaded from GEO Accession GSE155955.
@@ -46,12 +46,13 @@ We will download the normalized data from Assignment 1 and take a look at the da
 ```{r}
 normalized_count_data <- readRDS("../data/normalized_count_data.rds")
 
-kable(normalized_count_data[1:5,1:5], type="html") %>%
+kable(normalized_count_data[1:5,1:5], type="html", caption = "Table 1. A brief look at the data") %>%
   kable_styling()
 ```
 
+---
 
-# Differential Expression Analysis
+# Differential Gene Expression
 ## Determining factors
 We first need to determine which factors to account for in our analysis. Let's revisit the sample information. 
 
@@ -64,27 +65,33 @@ samples <- data.frame(lapply(colnames(normalized_count_data),
 colnames(samples) <- colnames(normalized_count_data)
 rownames(samples) <- c("cell.line","timepoint", "replicate")
 samples <- data.frame(t(samples))
-kable(samples, caption = "Sample Groups", col.names = c("Cell Line", "Timepoint (min)", "Replicate")) %>%
+kable(samples, caption = "Table 2. Sample Groups", col.names = c("Cell Line", "Timepoint (min)", "Replicate")) %>%
   kable_styling()
 ```
 
-
-We will visualize the factors of the samples in an MDS plot.
+We will visualize the factors of the samples in an MDS plot (Figure 1).
 ```{r, fig.cap = "Multidimensional scaling (MDS) plot of samples"}
-pat_colors <- colorspace::qualitative_hcl(24, palette = "dark2")
-pat_colors <- pat_colors[factor(colnames(normalized_count_data))]
+colors <- c("blue", "red", "green4", "purple")
+colors <- colors[factor(samples$timepoint)]
+symbols <- c(1, 2)
+symbols <- symbols[factor(samples$cell.line)]
+
 limma::plotMDS(normalized_count_data,
-               col = pat_colors, pch = 1, ylim = c(-1, 2.5))
+               col = colors, pch = symbols, ylim = c(-1, 2.5), cex = 1.5)
 title("MDS Plot of Samples")
-legend("topright", fill=pat_colors,legend=factor(colnames(normalized_count_data)), cex = 0.5, ncol = 4)
+legend("topright", title = "Timepoint (min)", fill = unique(colors), legend = unique(factor(samples$timepoint)), cex = 0.6, ncol = 4, bty = 'n', border = F)
+legend(x = 1.25, y = 2.2, title = "Cell Line", pch=unique(symbols),legend=factor(unique(factor(samples$cell.line))), cex = 0.6, ncol = 2, bty = 'n', border = F)
 ```
+__Figure 1. Multidimensional scaling (MDS) plot of samples.__ The cluster at the bottom left is are samples of MDA-MB-468 cell line at times 0 min, 30 min and 120 min. The cluster at the bottom right is samples of  MDA-MB-468res-R8 cell line at times 0 min, 30 min and 120 min. The cluster at the top left is samples of MDA-MB-468 cell line at time 720 min. The cluster at the top right is samples MDA-MB-468res-R8 cell line at time 720 min.
 
 
-From the MDS plot, we can see 4 clear clusters. The cluster at the bottom is MDA-MB-468 cell line at times 0h, 0.5h and 2h. The cluster to the left is MDA-MB-468res-R8 cell line at times 0h, 0.5h and 2h. The cluster at the top is MDA-MB-468 cell line at time 12h. The cluster to the right is MDA-MB-468res-R8 cell line at time 12h. The clustering is based on both the cell type and timepoint, therefore our model design should account for both these factors. 
+<br>
+
+From the MDS plot, we can see 4 clear clusters. The clustering is based on both the cell type and timepoint, therefore our model design should account for both these factors. 
 
 ---
 
-## Differential Expression Analysis using edgeR
+## Differential expression analysis using edgeR
 We will do two separate differential expression analyses; one for cell line MDA-MB-468, and the other for cell line MDA-MB-468res-R8. In each analysis, the cell line 12 hours after of methionine stress (with timepoint == 720) will be compared with the others. The edgeR package will be used as it is designed for differential expression analysis of RNA-seq expression profiles with biological replicates [@edgeR].
 
 
@@ -105,28 +112,29 @@ d <- estimateDisp(d, model_design)
 fit <- glmQLFit(d, model_design)
 qlf.results <- glmQLFTest(fit, coef = "samples_MB468$timepoint720")
 # take a look at results
-kable(topTags(qlf.results), type="html",row.names = FALSE) %>%
+kable(topTags(qlf.results)$table, type="html", caption = "Table 3. Results from fitting negative binomial generalized log-linear model to normalized count data of MDA-MB-468 samples") %>%
   kable_styling()
 ```
 
-We will look at the results to see how many genes pass the threshold p-value < 0.05, and how many genes pass the correction.
+We will look at the results to see how many genes pass the threshold p-value < 0.05; if the p-value is lower than 0.05, we consider the gene to be significantly differentially expressed. We also look at how many genes pass the correction. The correction method used is Benjamini-Hochberg (BH) method, which controls the false discovery rate (FDR).
 ```{r}
 # all results
 qlf_output_hits_MB468 <- topTags(qlf.results,sort.by = "PValue",
-                           n = nrow(counts_MB468))
+                           n = nrow(counts_MB468))$table
+
 # pass the threshold p-value < 0.05
-threshold_pval <- length(which(qlf_output_hits_MB468$table$PValue < 0.05))
+threshold_pval <- length(which(qlf_output_hits_MB468$PValue < 0.05))
 print(paste("Number of genes that pass the threshold p-value < 0.05:", threshold_pval))
 
-# pass correction?
-correction <- length(which(qlf_output_hits_MB468$table$FDR < 0.05))
+# pass correction
+correction <- length(which(qlf_output_hits_MB468$FDR < 0.05))
 print(paste("Number of genes that pass correction:", correction))
 ```
 
-Next, we will see how many genes were significantly differentially expressed. 
+Next, we will see how many genes were significantly differentially expressed. Of the genes that pass the p-value threshold of 0.05, if the log fold change is greater than 0, the gene is upregulated, and if it is less than 0, the gene is downregulated.
 ```{r}
 # adding expression column to record if gene is upregulated or downregulated
-qlf_output_hits_MB468$table <- qlf_output_hits_MB468$table %>% 
+qlf_output_hits_MB468 <- qlf_output_hits_MB468 %>% 
   mutate(
     expression = case_when(PValue < 0.05  & logFC > 0 ~ "upregulated",
                            PValue < 0.05  & logFC < 0 ~ "downregulated",
@@ -135,18 +143,18 @@ qlf_output_hits_MB468$table <- qlf_output_hits_MB468$table %>%
 
 # upregulated
 print(paste("Number of upregulated genes (MDA-MB-468):",
-            length(which(qlf_output_hits_MB468$table$expression == "upregulated"))))
+            length(which(qlf_output_hits_MB468$expression == "upregulated"))))
 
 # downregulated
 print(paste("Number of upregulated genes (MDA-MB-468):",
-            length(which(qlf_output_hits_MB468$table$expression == "downregulated"))))
+            length(which(qlf_output_hits_MB468$expression == "downregulated"))))
 ```
 
 
-We will visualize this in a volcano plot.
+We will visualize this in a volcano plot (Figure 2).
 ```{r, fig.cap = "Volcano Plot of differential expression in MDA-MB-468 samples"}
 # volcano plot
-volcano_plot <- ggplot(qlf_output_hits_MB468$table, aes(logFC, -log(PValue,10))) +
+volcano_plot <- ggplot(qlf_output_hits_MB468, aes(logFC, -log(PValue,10))) +
   geom_point(aes(color = expression), size = 2/5) +
   xlab(expression("log"[2]*"FC")) + 
   ylab(expression("-log"[10]*"PValue")) +
@@ -155,8 +163,7 @@ volcano_plot <- ggplot(qlf_output_hits_MB468$table, aes(logFC, -log(PValue,10)))
   guides(colour = guide_legend(override.aes = list(size=1.5))) 
 volcano_plot
 ```
-
-
+__Figure 2. Volcano Plot of differential expression in MDA-MB-468 samples.__ The points on the plot represent genes. Red points are upregulated, blue points are downregulated, and grey points are unchanged. 
 
 
 ### Analysis for cell line MDA-MB-468res-R8
@@ -175,28 +182,28 @@ d <- estimateDisp(d, model_design)
 fit <- glmQLFit(d, model_design)
 qlf.results <- glmQLFTest(fit, coef = "samples_R8$timepoint720")
 # take a look at results
-kable(topTags(qlf.results), type="html",row.names = FALSE) %>%
+kable(topTags(qlf.results)$table, type="html", caption = "Table 4. Results from fitting negative binomial generalized log-linear model to normalized count data of MDA-MB-468res-R8 samples") %>%
   kable_styling()
 ```
 
-We will look at the results to see how many genes pass the threshold p-value < 0.05, and how many genes pass the correction
+We will look at the results to see how many genes pass the threshold p-value < 0.05, and how many genes pass the correction. The same methods for the previous analysis are applied here.
 ```{r}
 # all results
 qlf_output_hits_R8 <- topTags(qlf.results,sort.by = "PValue",
-                           n = nrow(counts_R8))
+                           n = nrow(counts_R8))$table
 # pass the threshold p-value < 0.05
-threshold_pval <- length(which(qlf_output_hits_R8$table$PValue < 0.05))
+threshold_pval <- length(which(qlf_output_hits_R8$PValue < 0.05))
 print(paste("Number of genes that pass the threshold p-value < 0.05:", threshold_pval))
 
-# pass correction?
-correction <- length(which(qlf_output_hits_R8$table$FDR < 0.05))
+# pass correction
+correction <- length(which(qlf_output_hits_R8$FDR < 0.05))
 print(paste("Number of genes that pass correction:", correction))
 ```
 
 Next, we will see how many genes were significantly differentially expressed. 
 ```{r}
 # adding expression column to record if gene is upregulated, downregulated or unchanged
-qlf_output_hits_R8$table <- qlf_output_hits_R8$table %>% 
+qlf_output_hits_R8 <- qlf_output_hits_R8 %>% 
   mutate(
     expression = case_when(PValue < 0.05  & logFC > 0 ~ "upregulated",
                            PValue < 0.05  & logFC < 0 ~ "downregulated",
@@ -205,18 +212,18 @@ qlf_output_hits_R8$table <- qlf_output_hits_R8$table %>%
 
 # upregulated
 print(paste("Number of upregulated genes (MDA-MB-468res-R8):",
-            length(which(qlf_output_hits_R8$table$expression == "upregulated"))))
+            length(which(qlf_output_hits_R8$expression == "upregulated"))))
 
 # downregulated
 print(paste("Number of upregulated genes (MDA-MB-468res-R8):",
-            length(which(qlf_output_hits_R8$table$expression == "downregulated"))))
+            length(which(qlf_output_hits_R8$expression == "downregulated"))))
 ```
 
 
-We will visualize this in a volcano plot.
+We will visualize this in a volcano plot (Figure 3).
 ```{r, fig.cap = "Volcano Plot of differential expression in MDA-MB-468res-R8 samples"}
 # volcano plot
-volcano_plot <- ggplot(qlf_output_hits_MB468$table, aes(logFC, -log(PValue,10))) +
+volcano_plot <- ggplot(qlf_output_hits_MB468, aes(logFC, -log(PValue,10))) +
   geom_point(aes(color = expression), size = 2/5) +
   xlab(expression("log"[2]*"FC")) + 
   ylab(expression("-log"[10]*"PValue")) +
@@ -225,13 +232,14 @@ volcano_plot <- ggplot(qlf_output_hits_MB468$table, aes(logFC, -log(PValue,10)))
   guides(colour = guide_legend(override.aes = list(size=1.5))) 
 volcano_plot
 ```
-
+__Figure 3. Volcano Plot of differential expression in MDA-MB-468res-R8 samples.__ The points on the plot represent genes. Red points are upregulated, blue points are downregulated, and grey points are unchanged. 
 
 ## Heatmap of top hits
-We will visualize all our top hits with a heatmap. We will create the heatmap using the data from the differentially expressed genes.
+We will visualize all our top hits with a heatmap (Figure 4). We will create the heatmap using the data from the differentially expressed genes.
 ```{r, fig.cap = "Heatmap of differentially expressed genes"}
-mb468_deg <- row.names(qlf_output_hits_MB468)[qlf_output_hits_MB468$table$expression != "unchanged"]
-r8_deg <- row.names(qlf_output_hits_R8)[qlf_output_hits_R8$table$expression != "unchanged"]
+# getting all differentially expressed genes (not unchaged)
+mb468_deg <- row.names(qlf_output_hits_MB468)[qlf_output_hits_MB468$expression != "unchanged"]
+r8_deg <- row.names(qlf_output_hits_R8)[qlf_output_hits_R8$expression != "unchanged"]
 
 rows <- union(mb468_deg, r8_deg)
 
@@ -252,6 +260,7 @@ tophits_heatmap <- Heatmap(as.matrix(heatmap_matrix),
 
 tophits_heatmap
 ```
+__Figure 4. Heatmap of differentially expressed genes.__ The heatmap includes differentially expressed genes. The same clustering seen in the MDS plot (Figure 1) is seen in the heatmap.
 
 ---
 
@@ -262,25 +271,30 @@ For the thresholds, for upregulated, the p- value is less than 0.05 and the log 
 
 We will first see how many upregulated genes, downregulated genes, and differentially expressed genes there are. 
 ```{r}
-upregulated_MB468 <- row.names(qlf_output_hits_MB468)[(which(qlf_output_hits_MB468$table$expression ==
+upregulated_MB468 <- row.names(qlf_output_hits_MB468)[(which(qlf_output_hits_MB468$expression ==
                                                            "upregulated"))]
-upregulated_R8 <- row.names(qlf_output_hits_R8)[(which(qlf_output_hits_R8$table$expression ==
+upregulated_R8 <- row.names(qlf_output_hits_R8)[(which(qlf_output_hits_R8$expression ==
                                                            "upregulated"))]
 upregulated <- union(upregulated_MB468, upregulated_R8)
-downregulated_MB468 <- row.names(qlf_output_hits_MB468)[(which(qlf_output_hits_MB468$table$expression ==
+downregulated_MB468 <- row.names(qlf_output_hits_MB468)[(which(qlf_output_hits_MB468$expression ==
                                                            "downregulated"))]
-downregulated_R8 <- row.names(qlf_output_hits_R8)[(which(qlf_output_hits_R8$table$expression ==
+downregulated_R8 <- row.names(qlf_output_hits_R8)[(which(qlf_output_hits_R8$expression ==
                                                            "downregulated"))]
 downregulated <- union(downregulated_MB468, downregulated_R8)
 all_degs <- union(upregulated, downregulated)
 
-print(paste("Number of upregulated genes:", length(upregulated)))
-print(paste("Number of downregulated genes:", length(downregulated)))
-print(paste("Number of differentially expressed genes:", length(all_degs)))
+# number of upregulated genes
+length(upregulated)
+
+# number of downregulated genes
+length(downregulated)
+
+# number of differentially expressed genes
+length(all_degs)
 ```
 
 
-## Upregulated
+## Upregulated genes
 With the upregulated genes, no terms were found to be significantly enriched. 
 ```{r, message = FALSE, warning = FALSE}
 upreg_res <- gost(upregulated, organism = "hsapiens", sources = "GO:BP")
@@ -292,7 +306,7 @@ if(is.null(upreg_res)) {
 
 
 
-## Downregulated
+## Downregulated genes
 With the downregulated genes, two terms were found to be significantly enriched. 
 ```{r}
 downreg_res <- gost(downregulated, organism = "hsapiens", sources = "GO:BP")
@@ -301,7 +315,7 @@ downreg_df <- data.frame(term_id = downreg_res$result$term_id,
                       term_name = downreg_res$result$term_name, 
                       pval = downreg_res$result$p_value)
 
-kable(downreg_df, caption = "Significantly Enriched Terms (Downregulated Genes)", col.names = c("Term ID", "Term Names", "P-value")) %>%
+kable(downreg_df, caption = "Table 5. Significantly Enriched Terms (Downregulated Genes)", col.names = c("Term ID", "Term Names", "P-value")) %>%
   kable_styling()
 ```
 
@@ -316,17 +330,17 @@ all_degs_df <- data.frame(term_id = all_degs_res$result$term_id,
                       term_name = all_degs_res$result$term_name, 
                       pval = all_degs_res$result$p_value)
 
-kable(all_degs_df, caption = "Significantly Enriched Terms (Downregulated Genes)", col.names = c("Term ID", "Term Names", "P-value")) %>%
+kable(all_degs_df, caption = "Table 6. Significantly Enriched Terms (All Differentially Expressed Genes)", col.names = c("Term ID", "Term Names", "P-value")) %>%
   kable_styling()
 ```
 
 
 # Interpretation
-There were several significantly enriched terms were related to response to stimulus. Given that the samples' environment changed when methionine stress was added, these pathways were likely enriched because the cell lines were reponding to the change. 
+Three terms that were significantly enriched terms were related to response to stimulus. Given that the samples' environment changed when methionine stress was added, these pathways were likely enriched because the cell lines were responding to the change in environment.
 
-Several of the significantly enriched terms were related to cell death. Cancer cells have a metabolic requirement for methionine [@paper]. Therefore, when methionine was replaced with homocysteine, the TNBC cells were deprived of an essential metabolic requirement, possibly leading to cell death. Therefore, these pathways were significantly enriched.
+Four of the terms that were significantly enriched terms were related to cell death. Cancer cells have a metabolic requirement for methionine [@paper]. Therefore, when methionine was replaced with homocysteine, the TNBC cells were deprived of an essential metabolic requirement, possibly leading to cell death. Therefore, these pathways relating to cell death were significantly enriched.
 
-Two significantly enriched terms were response to corticotropin-releasing hormone. There are a few studies that observe some link between corticotropin-releasing hormone and methionine. One study showed that peptide histidine methionine strongly potentiated corticotropin-releasing hormone induced adrenocorticotropic hormone (ACTH) secretion in humans [@mouse]. However, the link between these genesets and our data is unclear.
+Two significantly enriched terms were response to corticotropin-releasing hormone. There are a few studies that observe some link between corticotropin-releasing hormone and methionine. One study showed that peptide histidine methionine strongly potentiated corticotropin-releasing hormone induced adrenocorticotropic hormone (ACTH) secretion in humans [@mouse]. However, the exact link between these pathways and the experimental data is unclear.
 
 
 # References
@@ -335,7 +349,6 @@ Two significantly enriched terms were response to corticotropin-releasing hormon
 @limma
 @ComplexHeatmap
 @circlize
-@colorspace
 @knitr
 @kableExtra
 @ggplot
