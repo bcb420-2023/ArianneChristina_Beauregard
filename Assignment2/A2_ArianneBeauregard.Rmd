@@ -9,7 +9,7 @@ output:
 bibliography: references.bib
 ---
 
-# Installing and load required packages
+# Install and load required packages
 ```{r, echo = T, results='hide'}
 
 bioc <- c("ComplexHeatmap", "edgeR", "limma")
@@ -72,11 +72,11 @@ kable(samples, caption = "Sample Groups", col.names = c("Cell Line", "Timepoint 
 We will visualize the factors of the samples in an MDS plot.
 ```{r, fig.cap = "Multidimensional scaling (MDS) plot of samples"}
 pat_colors <- colorspace::qualitative_hcl(24, palette = "dark2")
-pat_colors <- pat_colors[factor(colnames(heatmap_matrix))]
-limma::plotMDS(heatmap_matrix,
-               col = pat_colors, pch = 1)
+pat_colors <- pat_colors[factor(colnames(normalized_count_data))]
+limma::plotMDS(normalized_count_data,
+               col = pat_colors, pch = 1, ylim = c(-1, 2.5))
 title("MDS Plot of Samples")
-legend("bottomleft", fill=pat_colors,legend=factor(colnames(heatmap_matrix)), cex = 0.5, ncol = 4)
+legend("topright", fill=pat_colors,legend=factor(colnames(normalized_count_data)), cex = 0.5, ncol = 4)
 ```
 
 
