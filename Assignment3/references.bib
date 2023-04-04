@@ -1,0 +1,88 @@
+@article{gsea,
+author = {Aravind Subramanian  and Pablo Tamayo  and Vamsi K. Mootha  and Sayan Mukherjee  and Benjamin L. Ebert  and Michael A. Gillette  and Amanda Paulovich  and Scott L. Pomeroy  and Todd R. Golub  and Eric S. Lander  and Jill P. Mesirov },
+title = {Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles},
+journal = {Proceedings of the National Academy of Sciences},
+volume = {102},
+number = {43},
+pages = {15545-15550},
+year = {2005},
+doi = {10.1073/pnas.0506580102},
+URL = {https://www.pnas.org/doi/abs/10.1073/pnas.0506580102},
+eprint = {https://www.pnas.org/doi/pdf/10.1073/pnas.0506580102},
+abstract = {Although genomewide RNA expression analysis has become a routine tool in biomedical research, extracting biological insight from such information remains a major challenge. Here, we describe a powerful analytical method called Gene Set Enrichment Analysis (GSEA) for interpreting gene expression data. The method derives its power by focusing on gene sets, that is, groups of genes that share common biological function, chromosomal location, or regulation. We demonstrate how GSEA yields insights into several cancer-related data sets, including leukemia and lung cancer. Notably, where single-gene analysis finds little similarity between two independent studies of patient survival in lung cancer, GSEA reveals many biological pathways in common. The GSEA method is embodied in a freely available software package, together with an initial database of 1,325 biologically defined gene sets.}}
+
+@article{paper,
+title = {Lipid remodeling in response to methionine stress in MDA-MBA-468 triple-negative breast cancer cells},
+journal = {Journal of Lipid Research},
+volume = {62},
+pages = {100056},
+year = {2021},
+issn = {0022-2275},
+doi = {https://doi.org/10.1016/j.jlr.2021.100056},
+url = {https://www.sciencedirect.com/science/article/pii/S0022227521000389},
+author = {Stacey L. Borrego and Johannes Fahrmann and Jue Hou and Da-Wei Lin and Bruce J. Tromberg and Oliver Fiehn and Peter Kaiser},
+keywords = {cancer metabolism, homocysteine, methionine, methionine stress, lipid metabolism, lipid droplets, phospholipids, fatty acid metabolism, triglycerides},
+abstract = {Methionine (Met) is an essential amino acid and critical precursor to the cellular methyl donor S-adenosylmethionine. Unlike nontransformed cells, cancer cells have a unique metabolic requirement for Met and are unable to proliferate in growth media where Met is replaced with its metabolic precursor, homocysteine. This metabolic vulnerability is common among cancer cells regardless of tissue origin and is known as “methionine dependence”, “methionine stress sensitivity”, or the Hoffman effect. The response of lipids to Met stress, however, is not well-understood. Using mass spectroscopy, label-free vibrational microscopy, and next-generation sequencing, we characterize the response of lipids to Met stress in the triple-negative breast cancer cell line MDA-MB-468 and its Met stress insensitive derivative, MDA-MB-468res-R8. Lipidome analysis identified an immediate, global decrease in lipid abundances with the exception of triglycerides and an increase in lipid droplets in response to Met stress specifically in MDA-MB-468 cells. Furthermore, specific gene expression changes were observed as a secondary response to Met stress in MDA-MB-468, resulting in a downregulation of fatty acid metabolic genes and an upregulation of genes in the unfolded protein response pathway. We conclude that the extensive changes in lipid abundance during Met stress is a direct consequence of the modified metabolic profile previously described in Met stress–sensitive cells. The changes in lipid abundance likely results in changes in membrane composition inducing the unfolded protein response we observe.}
+}
+
+@article{enrichmentmap,
+    doi = {10.1371/journal.pone.0013984},
+    author = {Merico, Daniele AND Isserlin, Ruth AND Stueker, Oliver AND Emili, Andrew AND Bader, Gary D.},
+    journal = {PLOS ONE},
+    publisher = {Public Library of Science},
+    title = {Enrichment Map: A Network-Based Method for Gene-Set Enrichment Visualization and Interpretation},
+    year = {2010},
+    month = {11},
+    volume = {5},
+    url = {https://doi.org/10.1371/journal.pone.0013984},
+    pages = {1-12},
+    abstract = {Background Gene-set enrichment analysis is a useful technique to help functionally characterize large gene lists, such as the results of gene expression experiments. This technique finds functionally coherent gene-sets, such as pathways, that are statistically over-represented in a given gene list. Ideally, the number of resulting sets is smaller than the number of genes in the list, thus simplifying interpretation. However, the increasing number and redundancy of gene-sets used by many current enrichment analysis software works against this ideal.  Principal Findings To overcome gene-set redundancy and help in the interpretation of large gene lists, we developed “Enrichment Map”, a network-based visualization method for gene-set enrichment results. Gene-sets are organized in a network, where each set is a node and edges represent gene overlap between sets. Automated network layout groups related gene-sets into network clusters, enabling the user to quickly identify the major enriched functional themes and more easily interpret the enrichment results.  Conclusions Enrichment Map is a significant advance in the interpretation of enrichment analysis. Any research project that generates a list of genes can take advantage of this visualization framework. Enrichment Map is implemented as a freely available and user friendly plug-in for the Cytoscape network visualization software (http://baderlab.org/Software/EnrichmentMap/).},
+    number = {11},
+
+}
+@article{cytoscape, 
+  title={Cytoscape: a software environment for integrated models of biomolecular interaction networks},
+  author={Shannon, Paul and Markiel, Andrew and Ozier, Owen and Baliga, Nitin S and Wang, Jonathan T and Ramage, Daniel and Amin, Nada and Schwikowski, Benno and Ideker, Trey},
+  journal={Genome research}, 
+  volume={13}, 
+  number={11}, 
+  pages={2498--2504}, 
+  year={2003}, 
+  publisher={Cold Spring Harbor Lab} 
+}
+
+@article{autoannotate,
+  title     = "{AutoAnnotate}: A Cytoscape app for summarizing networks with
+               semantic annotations",
+  author    = "Kucera, Mike and Isserlin, Ruth and Arkhangorodsky, Arkady and
+               Bader, Gary D",
+  abstract  = "Networks often contain regions of tightly connected nodes, or
+               clusters, that highlight their shared relationships. An
+               effective way to create a visual summary of a network is to
+               identify clusters and annotate them with an enclosing shape and
+               a summarizing label. Cytoscape provides the ability to annotate
+               a network with shapes and labels, however these annotations must
+               be created manually one at a time, which can be a laborious
+               process. AutoAnnotate is a Cytoscape 3 App that automates the
+               process of identifying clusters and visually annotating them. It
+               greatly reduces the time and effort required to fully annotate
+               clusters in a network, and provides freedom to experiment with
+               different strategies for identifying and labelling clusters.
+               Many customization options are available that enable the user to
+               refine the generated annotations as required. Annotated clusters
+               may be collapsed into single nodes using the Cytoscape groups
+               feature, which helps simplify a network by making its overall
+               structure more visible. AutoAnnotate is applicable to any type
+               of network, including enrichment maps, protein-protein
+               interactions, pathways, or social networks.",
+  journal   = "F1000Res.",
+  publisher = "F1000 Research, Ltd.",
+  volume    =  5,
+  pages     = "1717",
+  month     =  jul,
+  year      =  2016,
+  keywords  = "annotations; complexity reduction; cytoscape; enrichment map;
+               modular networks; network analysis; network clustering; tag
+               cloud",
+  language  = "en"
+}
