@@ -4,6 +4,7 @@ author: Arianne Beauregard
 output: 
   html_notebook:
     toc: true
+    toc_depth: 2
 bibliography: references.bib
 ---
 # Install and load required packages
@@ -95,9 +96,9 @@ The parameter Collapse/Remap to gene symbols is set to "No_Collapse". For the si
 ## Results for cell line MDA-MB-468
 ### MDA-MB-468 with methionine stress
 - 3006 / 5119 gene sets are upregulated in cell line MDA-MB-468 with methionine stress
-- 594 gene sets are significant at FDR < 25%
-- 315 gene sets are significantly enriched at nominal pvalue < 1%
-- 615 gene sets are significantly enriched at nominal pvalue < 5%
+- 600 gene sets are significant at FDR < 25%
+- 320 gene sets are significantly enriched at nominal pvalue < 1%
+- 620 gene sets are significantly enriched at nominal pvalue < 5%
 
 ```{r}
 mb468_pos <- read.delim("../data/gsea_report_for_na_pos_MB468.tsv", header = TRUE)
@@ -111,9 +112,9 @@ kable(head(mb468_pos), type="html", caption = "Table 3. Head of positive enrichm
 
 ### MDA-MB-468 without methionine stress
 - 2113 / 5119 gene sets are upregulated in cell line MDA-MB-468 without methionine stress
-- 1 gene sets are significantly enriched at FDR < 25%
-- 62 gene sets are significantly enriched at nominal pvalue < 1%
-- 204 gene sets are significantly enriched at nominal pvalue < 5%
+- 0 gene sets are significantly enriched at FDR < 25%
+- 65 gene sets are significantly enriched at nominal pvalue < 1%
+- 200 gene sets are significantly enriched at nominal pvalue < 5%
 
 ```{r}
 mb468_neg <- read.delim("../data/gsea_report_for_na_neg_MB468.tsv", header = TRUE)
@@ -127,9 +128,9 @@ kable(head(mb468_neg), type="html", caption = "Table 4. Head of negative enrichm
 ## Results for cell line MDA-MB-468res-R8
 ### MDA-MB-468res-R8 with methionine stress
 - 3465 / 5119 gene sets are upregulated in cell line MDA-MB-468res-R8 with methionine stress
-- 466 gene sets are significant at FDR < 25%
-- 231 gene sets are significantly enriched at nominal pvalue < 1%
-- 575 gene sets are significantly enriched at nominal pvalue < 5%
+- 475 gene sets are significant at FDR < 25%
+- 240 gene sets are significantly enriched at nominal pvalue < 1%
+- 583 gene sets are significantly enriched at nominal pvalue < 5%
 
 ```{r}
 r8_pos <- read.delim("../data/gsea_report_for_na_pos_R8.tsv", header = TRUE)
@@ -142,9 +143,9 @@ kable(head(r8_pos), type="html", caption = "Table 5. Head of positive enrichment
 
 ### MDA-MB-468res-R8 without methionine stress
 - 1654 / 5119 gene sets are upregulated in cell line MDA-MB-468res-R8 without methionine stress
-- 653 gene sets are significantly enriched at FDR < 25%
-- 375 gene sets are significantly enriched at nominal pvalue < 1%
-- 555 gene sets are significantly enriched at nominal pvalue < 5%
+- 655 gene sets are significantly enriched at FDR < 25%
+- 362 gene sets are significantly enriched at nominal pvalue < 1%
+- 556 gene sets are significantly enriched at nominal pvalue < 5%
 
 ```{r}
 r8_neg <- read.delim("../data/gsea_report_for_na_neg_R8.tsv", header = TRUE)
@@ -160,13 +161,12 @@ todo:
 - Summarize your enrichment results.
 - How do these results compare to the results from the thresholded analysis in Assignment #2. Compare qualitatively. Is this a straight forward comparison? Why or why not?
 
-
-
+---
 
 # Visualize your Gene set Enrichment Analysis in Cytoscape
 We will visualize the results using EnrichmentMap (version 3.3.5) [@enrichmentmap] in Cytoscape (version 3.9.1 for Mac OS X) [@cytoscape].
 
-We will make two enrichment maps, one for each cell line. Below are the parameter used to create the Enrichment Map:
+We will make two enrichment maps, one for each cell line. Below are the parameters used to create the enrichment map. All other parameters were set to default.
 
 - Analysis Type: GSEA
 - Enrichments Pos: gsea_report_for_na_pos.tsv (from GSEA results)
@@ -180,40 +180,63 @@ In Advanced Options,
 - p-value cutoff: 0.05
 - Parse baderlab names in GMT file &#10003;
 
+Once network is produced, the "Publication-Ready" option was selected. Legends were added using the Legend Creator app.
+
 
 ## MDA-MB-468
 ### Initial Cytoscape network
 ![Enrichment Map for cell line MDA-MB-468](../figures/MB468.png)
-There are 137 nodes and 1221 edges in the network for cell line MDA-MB-468. Each node represents a gene set, and each edge represents an interaction between two genesets.
+__Figure 1. Initial Enrichment Map for cell line MDA-MB-468.__ Each node represents a gene set, and each edge represents an interaction between two gene sets. The size of each node represents the size of the gene set. The colour of the nodes are based on the formula 1 - p-value, multiplied by the sign of the enrichment score. 
+
+
+There are 135 nodes and 1167 edges in the network for cell line MDA-MB-468. The gene sets were filtered to only include those with p-value < 0.05 and FDR < 0.05 into the network above.
+
 
 ### Annotated network
-The AutoAnnotate app was used to annotate the network [@autoannotate]. The size of the annotations are proportional to the cluster size. The option "Publication-Ready" was selected.
+The AutoAnnotate app was used to annotate the network [@autoannotate]. Below are the parameters used. All other parameters were set to default.
 
-TODO: choose one image (add legend to other)
-![Annotated Enrichment Map for cell line MDA-MB-468](../figures/MB468_legend.png)
+- Use clusterMaker App &#10003;
+    * Cluster algorithm: MCL Cluster
+    * Edge weight column: similarity_coefficient
 
 ![Annotated Enrichment Map for cell line MDA-MB-468](../figures/MB468_annotated.png)
+__Figure 2. Annotated Enrichment Map for cell line MDA-MB-468.__ Each yellow circle represents a cluster of gene sets.  The size of the annotations are proportional to the cluster size.
 
+
+There are 17 clusters in the network. The size of the annotations are proportional to the cluster size. 
+
+
+### Theme network
+A theme network was created by collapsing the above annotated network.
+![Theme network for cell line MDA-MB-468](../figures/MB468_collapsed.png)
+__Figure 3. Theme for cell line MDA-MB-468.__ Each node represents a cluster of gene sets.  The size of the annotations are proportional to the cluster size.
 
 
 ## MDA-MB-468res-R8
 ### Initial Cytoscape network
-Below is the initial unchanged network.
 ![Enrichment Map for cell line MDA-MB-468res-R8](../figures/R8.png)
-There are 261 nodes and 2283 edges in the network for cell line MDA-MB-468.
+__Figure 4. Initial Enrichment Map for cell line MDA-MB-468res-R8.__ Each node represents a gene set, and each edge represents an interaction between two gene sets. The size of each node represents the size of the gene set. The colour of the nodes are based on the formula 1 - p-value, multiplied by the sign of the enrichment score. 
+
+
+There are 251 nodes and 2241 edges in the network for cell line MDA-MB-468res-R8. The gene sets were filtered to only include those with p-value < 0.05 and FDR < 0.05 into the network above. 
+
 
 ### Annotated network
-The AutoAnnotate app was used to annotate the network [@autoannotate]. The size of the annotations are proportional to the cluster size. The option "Publication-Ready" was selected.
+The AutoAnnotate app was used to annotate the network [@autoannotate]. Below are the parameters used. All other parameters were set to default.
 
-TODO: choose one image (add legend to other)
-![Annotated Enrichment Map for cell line MDA-MB-468res-R8](../figures/R8_legend.png)
+- Use clusterMaker App &#10003;
+    * Cluster algorithm: MCL Cluster
+    * Edge weight column: similarity_coefficient
+
 ![Annotated Enrichment Map for cell line MDA-MB-468res-R8](../figures/R8_annotated.png)
-todo:
+__Figure 5. Annotated Enrichment Map for cell line MDA-MB-468res-R8.__ Each yellow circle represents a cluster of gene sets.  The size of the annotations are proportional to the cluster size.
 
-- Add figure legends
-- Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?
-- Present your results with the use of tables and screenshots -> what tables?
+There are 33 clusters in the network. The size of the annotations are proportional to the cluster size. 
 
+
+### Theme network
+A theme network was created by collapsing the above annotated network.
+![Theme network for cell line MDA-MB-468res-R8](../figures/R8_collapsed.png)
 
 
 # Interpretation and detailed view of results
@@ -229,7 +252,6 @@ Choose a specific pathway or theme to investigate in more detail. Why did you ch
 Sometimes the most interesting information is the gene that has no information. In this type of pathway analysis we can only discover what we have already described previously in the literature or pathway databases. Often pathways found in one disease are applicable to other diseases so this technique can be very helpful. It is important to highlight any genes that are significantly differentially expressed in your model but are not annotated to any pathways. We refer to this set of genes as the dark matter.
 Include a heatmap of any significant genes that are not annotated to any of the pathways returned in the enrichment analysis.
 Include a heatmap of any significant genes that are not annotated to any pathways in entire set of pathways used for the analysis.
-
 
 
 
