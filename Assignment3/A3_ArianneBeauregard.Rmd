@@ -9,7 +9,6 @@ bibliography: references.bib
 ---
 # Install and load required packages
 ```{r, echo = T, results='hide'}
-# TODO: add required packages
 bioc <- c()
 cran <- c("knitr", "kableExtra")
 
@@ -111,7 +110,7 @@ kable(head(mb468_pos), type="html", caption = "Table 3. Head of positive enrichm
 
 
 ### MDA-MB-468 without methionine stress
-- 2113 / 5119 gene sets are upregulated in cell line MDA-MB-468 without methionine stress
+- 2113 / 5119 gene sets are downregulated in cell line MDA-MB-468 with methionine stress
 - 0 gene sets are significantly enriched at FDR < 25%
 - 65 gene sets are significantly enriched at nominal pvalue < 1%
 - 200 gene sets are significantly enriched at nominal pvalue < 5%
@@ -142,7 +141,7 @@ kable(head(r8_pos), type="html", caption = "Table 5. Head of positive enrichment
 ```
 
 ### MDA-MB-468res-R8 without methionine stress
-- 1654 / 5119 gene sets are upregulated in cell line MDA-MB-468res-R8 without methionine stress
+- 1654 / 5119 gene sets are downregulated in cell line MDA-MB-468res-R8 with methionine stress
 - 655 gene sets are significantly enriched at FDR < 25%
 - 362 gene sets are significantly enriched at nominal pvalue < 1%
 - 556 gene sets are significantly enriched at nominal pvalue < 5%
@@ -156,10 +155,12 @@ kable(head(r8_neg), type="html", caption = "Table 5. Head of negative enrichment
   kable_styling()
 ```
 
-todo:
+## Comparisoon with results from Assignment 2
+The significantly enriched gene sets in our gene set enrichment analysis differ from the results from te thresholded over-representation analysis in Assignment 2. In Assignment 2, the significantly enriched gene sets had three main themes, response to stimulus, cell death and response to corticotropin-releasing hormone. 
 
-- Summarize your enrichment results.
-- How do these results compare to the results from the thresholded analysis in Assignment #2. Compare qualitatively. Is this a straight forward comparison? Why or why not?
+In our gene set enrichment analysis, the main themes of the upregulated gene sets for cell line MDA-MB-468 were related to lipids and cholesterol, while the downregulated gene sets were related to membrane invagination and tRNA processing. There was no clear main theme of the upregulated gene sets for methionine-insensitive derivative cell line MDA-MB-468res-R8 were related to lipids and cholesterol, while main themese of the downregulated gene sets were related to ribosomes and rRNA processing.
+
+The differences in the results are expected; in Assignment 2, only a total of 49 genes were considered in the analysis, as this was the total number of differentially expressed genes. In our gene set enrichment analysis, all 13078 genes were considered. Therefore, the different results can be attributed to the significant difference in the magnitude of data considered.
 
 ---
 
@@ -241,17 +242,17 @@ A theme network was created by collapsing the above annotated network.
 
 # Interpretation and detailed view of results
 
-The most important aspect of the analysis is relating your results back to the initial data and question.
+## Results for MDA-MB-468
+Looking at our networks for cell line MDA-MB-468, a major theme of the significant positively enriched gene sets in the cell lines with methionine stress is relating to lipids. In the paper, when methionins stress was added, a global lipid response was induced [@paper]. Our results are consistent with this finding, as we see themes such as "chain fatty acid" and "cellular lipid catabolic" in the theme network. 
 
-Do the enrichment results support conclusions or mechanism discussed in the original paper? How do these results differ from the results you got from Assignment #2 thresholded methods
-Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?
-Using your networks and results from the previous section add one of the following:
+No gene sets were significantly downregulated (FDR < 0.05) for cell line MDA-MB-468 with methionine stress.
 
-Add a post analysis to your main network using specific transcription factors, microRNAs or drugs. Include the reason why you chose the specific miRs, TFs or drugs (i.e publications indicating that they might be related to your model). What does this post analysis show?
-Choose a specific pathway or theme to investigate in more detail. Why did you choose this pathway or theme? Show the pathway or theme as a gene network or as a pathway diagram. Annotate the network or pathway with your original log fold expression values and p-values to show how it is effected in your model. (Hint: if the theme or pathway is not from database that has detailed mechanistic information like Reactome you can use apps like GeneMANIA or String to build the the interaction network.)
-Sometimes the most interesting information is the gene that has no information. In this type of pathway analysis we can only discover what we have already described previously in the literature or pathway databases. Often pathways found in one disease are applicable to other diseases so this technique can be very helpful. It is important to highlight any genes that are significantly differentially expressed in your model but are not annotated to any pathways. We refer to this set of genes as the dark matter.
-Include a heatmap of any significant genes that are not annotated to any of the pathways returned in the enrichment analysis.
-Include a heatmap of any significant genes that are not annotated to any pathways in entire set of pathways used for the analysis.
+
+
+## Results for MDA-MB-468res-R8
+Methionine is is the precursor to S-adenosylmethionine (SAM), the main methyl donor in the cell. SAM is a co-factor for a variety of methyltransferases that catalyze methylation events on DNA, RNA, proteins, and lipids [@paper]. Therefore, if methionine stress were added, i.e., there were a lack of methionine, core processes on DNA, RNA, proteins, and lipids would be inhibited. 
+
+In our results, major themes of the significantly negatively enriched gene sets when methionine is added the the cell lines are relating to transcription, RNA and genetic related themes. This is consistent with the effects of methionine stress stated earlier.  
 
 
 
