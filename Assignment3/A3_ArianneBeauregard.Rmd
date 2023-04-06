@@ -91,7 +91,7 @@ The parameters for the analysis are as follows:
 All other parameters are set to default.
 
 ## Results for cell line MDA-MB-468
-### MDA-MB-468 with methionine stress
+### Upregulation in MDA-MB-468
 - 3006 / 5119 gene sets are upregulated in cell line MDA-MB-468 with methionine stress
 - 600 gene sets are significant at FDR < 25%
 - 320 gene sets are significantly enriched at nominal pvalue < 1%
@@ -109,7 +109,7 @@ kable(head(mb468_pos, n = 5), type="html", caption = "Table 3. Head of positive 
 ```
 
 
-### MDA-MB-468 without methionine stress
+### Downregulation in MDA-MB-468
 - 2113 / 5119 gene sets are downregulated in cell line MDA-MB-468 with methionine stress
 - 0 gene sets are significantly enriched at FDR < 25%
 - 65 gene sets are significantly enriched at nominal pvalue < 1%
@@ -127,7 +127,7 @@ kable(head(mb468_neg, n = 5), type="html", caption = "Table 4. Head of negative 
 ```
 
 ## Results for cell line MDA-MB-468res-R8
-### MDA-MB-468res-R8 with methionine stress
+### Upregulation in MDA-MB-468res-R8
 - 3465 / 5119 gene sets are upregulated in cell line MDA-MB-468res-R8 with methionine stress
 - 475 gene sets are significant at FDR < 25%
 - 240 gene sets are significantly enriched at nominal pvalue < 1%
@@ -144,7 +144,7 @@ kable(head(r8_pos, n = 5), type="html", caption = "Table 5. Head of positive enr
   kable_styling()
 ```
 
-### MDA-MB-468res-R8 without methionine stress
+### Downregulation in MDA-MB-468res-R8
 - 1654 / 5119 gene sets are downregulated in cell line MDA-MB-468res-R8 with methionine stress
 - 655 gene sets are significantly enriched at FDR < 25%
 - 362 gene sets are significantly enriched at nominal pvalue < 1%
@@ -164,7 +164,9 @@ kable(head(r8_neg, n = 5), type="html", caption = "Table 5. Head of negative enr
 ## Comparison with results from Assignment 2
 The significantly enriched gene sets in our gene set enrichment analysis differ from the results from te thresholded over-representation analysis in Assignment 2. In Assignment 2, the significantly enriched gene sets had three main themes, response to stimulus, cell death and response to corticotropin-releasing hormone. 
 
-In our gene set enrichment analysis, the main theme of the upregulated gene sets for cell line MDA-MB-468 was metabolic and biosynthetic processes of lipids, and the downregulated gene sets were related to membrane invagination and tRNA processing. There was no clear main theme of the upregulated gene sets for methionine-insensitive derivative cell line MDA-MB-468res-R8, while main themes of the downregulated gene sets were ribosomal synthesis and rRNA processing.
+The main theme of the upregulated gene sets for cell line MDA-MB-468 was metabolic and biosynthetic processes of lipids, and the downregulated gene sets were related to membrane invagination and tRNA processing. 
+
+There was no clear main theme of the upregulated gene sets for methionine-insensitive derivative cell line MDA-MB-468res-R8, while main themes of the downregulated gene sets were ribosomal synthesis and rRNA processing.
 
 The differences in the results are expected; in Assignment 2, only a total of 49 genes were considered in the analysis, as this was the total number of differentially expressed genes. In our gene set enrichment analysis, all 13078 genes were considered. Therefore, the different results can be attributed to the significant difference in the magnitude of data considered.
 
@@ -218,7 +220,7 @@ A theme network was created by collapsing the above annotated network.
 ![Theme network for cell line MDA-MB-468](../figures/MB468_collapsed.png)
 __Figure 3. Theme for cell line MDA-MB-468.__ Each node represents a cluster of gene sets.  The size of the annotations are proportional to the cluster size.
 
-The largest themes are zoledronate action pathway (39 gene sets) and svnthesis valine protein (28 gene sets). The remaining 15 themes have less than 10 gene sets in their clusters. 
+The largest themes are zoledronate action pathway (39 gene sets) and synthesis valine protein (28 gene sets). The remaining 15 themes have less than 10 gene sets in their clusters. 
 
 ## MDA-MB-468res-R8
 The same approach was applied to the gene set enrichment analysis results for cell line MDA-MB-468res-R8.
@@ -247,21 +249,55 @@ __Figure 6. Theme for cell line MDA-MB-468res-R8.__ Each node represents a clust
 
 The largest themes are selenocysteine synthesis valine (47 gene sets), apc degradation securin (35 gene sets), and slbp mature transcript (22 gene sets). The remaining 30 themes have less than 10 gene sets in their clusters. 
 
+---
+
 # Interpretation and detailed view of results
 
-## Results for MDA-MB-468
-Looking at our networks for cell line MDA-MB-468, a major theme of the significant positively enriched gene sets in the cell lines with methionine stress is relating to lipids. In the paper, when methionins stress was added, a global lipid response was induced [@paper]. Our results are consistent with this finding, as we see themes such as "chain fatty acid" and "cellular lipid catabolic" in the theme network. 
+__Do the enrichment results support conclusions or mechanism discussed in the original paper?__
+In our GSEA for MDA-MB-468, the main theme of the upregulated gene sets for cell line MDA-MB-468 was metabolic and biosynthetic processes of lipids, and the downregulated gene sets were related to membrane invagination and tRNA processing. 
 
-No gene sets were significantly downregulated (FDR < 0.05) for cell line MDA-MB-468 with methionine stress.
+In the paper, there was a downregulation of 22.3% of genes genes in fatty acid biosynthetic processes and 15.9% of genes in fatty acid beta-oxidation pathway. There was an upregulation of only 5.6% of genes genes in fatty acid biosynthetic processes and 2.3% genes in fatty acid beta-oxidation pathway. Therefore, our results capture the same themes as the paper, however not in the same direction.
+
+As stated in the paper, methionine is is the precursor to S-adenosylmethionine (SAM), the main methyl donor in the cell. SAM is a co-factor for a variety of methyltransferases that catalyze methylation events on DNA, RNA, proteins, and lipids [@paper]. Therefore, if methionine stress were added and there were a lack of methionine, core processes on DNA, RNA, proteins, and lipids would be inhibited. 
+
+In our GSEA for MDA-MB-468res-R8, major themes of the significantly negatively enriched gene sets when methionine is added the the cell lines are relating to transcription, RNA and genetic related themes. 
+
+As stated in the paper, methionine is is the precursor to S-adenosylmethionine (SAM), the main methyl donor in the cell. SAM is a co-factor for a variety of methyltransferases that catalyze methylation events on DNA, RNA, proteins, and lipids [@paper]. Therefore, if methionine stress were added and there were a lack of methionine, core processes on DNA, RNA, proteins, and lipids would be inhibited. The results from the GSEA are consistent with the effects of methionine stress stated in the paper.  
+
+__How do these results differ from the results you got from Assignment #2 thresholded methods?__
+As the GSEA considered all 13078 genes and not just the 49 genes that were found to be significantly differentially expressed in Assignment 2, the results from the GSEA are a lot more comprehensive. The results are also more consistent with the findings in original paper as compared to the threshold methods in Assignment 2.
+
+__Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?__
+From the network generated in Cytoscape, the largest theme for cell line MDA-MB-468 is zoledronate action pathway. Zoledronate is a drug used to treat several bone diseases, including osteoporosis and bone breakdown due to cancer [@zoledronate]. From the paper, there is no direct link between zoledronate and the experiment. However, zoledronate has been found to disrupt fatty acid metabolism in renal tubular epithelial cells [@lipidzol]. Therefore, upregulated genes related to fatty acid metabolism may have also been genes in the zoledronate action pathway, therefore being an upregulated theme.
 
 
+## Analysis of Sterol Metabolic Process 
+As lipid response is a key theme in the experiment, I chose to further analyse the Sterol Metabolic Process GO Biological Process Gene Set (GO:0016125). This was also the top positively enirhced gene set for cell line MDA-MB-468.
 
-## Results for MDA-MB-468res-R8
-Methionine is is the precursor to S-adenosylmethionine (SAM), the main methyl donor in the cell. SAM is a co-factor for a variety of methyltransferases that catalyze methylation events on DNA, RNA, proteins, and lipids [@paper]. Therefore, if methionine stress were added, i.e., there were a lack of methionine, core processes on DNA, RNA, proteins, and lipids would be inhibited. 
+```{r}
+sterol_met_proc <- read.delim("../data/sterol_metabolic_process.tsv", header = TRUE)
 
-In our results, major themes of the significantly negatively enriched gene sets when methionine is added the the cell lines are relating to transcription, RNA and genetic related themes. This is consistent with the effects of methionine stress stated earlier.  
+# drop unnecessary columns
+sterol_met_proc <- sterol_met_proc[, !(names(sterol_met_proc) %in% c("NAME", "X"))]
+
+kable(head(sterol_met_proc, n = 5), type="html", caption = "Table 6. Head of GSEA results for Sterol Metabolic Process", row.names = FALSE) %>%
+  kable_styling()
+```
+
+The results for the genes in the gene set will be used to format the gene network. 
+```{r}
+genes <- sterol_met_proc[, "SYMBOL"]
+# get results for these genes
+sterol <- qlf_output_hits_MB468[genes, ]
+sterol$gene <- row.names(sterol)
+write.table(sterol, "../data/sterol_results.txt", quote = FALSE, sep = "\t", row.names = FALSE)
+```
 
 
+![Gene network for Sterol Metabolic Process](../figures/sterol.png)
+__Figure 7. Gene network for genes in Sterol Metabolic Process GO Biological Process.__ The colours of the nodes correspond to their log fold change in expression. Homo sapiens was selected as the organism.
+
+---
 
 # References
 @paper
@@ -271,3 +307,6 @@ In our results, major themes of the significantly negatively enriched gene sets 
 @autoannotate
 @edgeR
 @gprofiler
+@zoledronate
+@lipidzol
+@genemania
